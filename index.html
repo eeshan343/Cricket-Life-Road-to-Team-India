@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cricket Life — Road to India (Features)</title>
+  <title>Cricket Life — Road to India (Features + More Cards)</title>
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Inter:wght@300;500;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --pitch: #1a3b1a; --grass: #2d5a27; --ink: #0f1a10;
-      --card: rgba(255,255,255,0.93); --accent: #e63946;
+      --card: rgba(255,255,255,0.93); --accent: #e63946; --gold: #c5a065;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -19,13 +19,11 @@
       display: flex; align-items: center; justify-content: center;
     }
 
-    /* 3D Background */
     #canvas-container {
       position: fixed; inset: 0; z-index: 0; pointer-events: none;
     }
     canvas { display: block; }
 
-    /* Game UI */
     .game-ui {
       position: relative; z-index: 10;
       width: 92%; max-width: 540px; height: 90vh;
@@ -36,7 +34,6 @@
       backdrop-filter: blur(16px);
     }
 
-    /* Header */
     .header {
       background: linear-gradient(135deg, var(--pitch) 0%, var(--grass) 100%);
       padding: 1.6rem 1.4rem 1.2rem; color: white; position: relative; overflow: hidden;
@@ -57,7 +54,12 @@
       font-weight: 600; backdrop-filter: blur(4px);
     }
 
-    /* Stats */
+    /* NEW CARD: Gold milestone badge */
+    .badge.gold {
+      background: linear-gradient(135deg, #f2d98a 0%, #c5a065 100%);
+      color: #3d2b0f; border-color: rgba(0,0,0,0.15);
+    }
+
     .stats {
       display: grid; grid-template-columns: repeat(4, 1fr);
       gap: 0.4rem; padding: 0.9rem 1.2rem;
@@ -67,7 +69,6 @@
     .stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7a6b; font-weight: 700; }
     .stat-val { font-size: 1.15rem; font-weight: 800; color: var(--ink); }
 
-    /* Story */
     .story {
       flex: 1; padding: 1.4rem; overflow-y: auto; line-height: 1.55;
     }
@@ -80,6 +81,15 @@
       box-shadow: 0 6px 18px rgba(230,57,70,0.25); margin-bottom: 1rem;
       letter-spacing: -0.01em;
     }
+
+    /* NEW CARD: Milestone banner card */
+    .milestone-card {
+      background: linear-gradient(135deg, #fdf6e3 0%, #f5e6c8 100%);
+      border: 1px solid #e6cfa3; border-radius: 14px; padding: 1rem;
+      margin-bottom: 1rem; box-shadow: 0 6px 20px rgba(197,160,101,0.15);
+    }
+    .milestone-card h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: #5a3e12; margin-bottom: 0.25rem; }
+    .milestone-card p { font-size: 0.85rem; color: #7a5c2e; margin: 0; }
 
     .choice-btn {
       width: 100%; background: white; border: 1.5px solid rgba(0,0,0,0.06);
@@ -94,7 +104,6 @@
     .choice-btn h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.15rem; }
     .choice-btn p { font-size: 0.82rem; color: #555; margin: 0; line-height: 1.35; }
 
-    /* Footer / Controls */
     .footer {
       padding: 0.9rem 1.4rem; border-top: 1px solid rgba(0,0,0,0.06);
       background: rgba(0,0,0,0.015); display: flex; justify-content: space-between; align-items: center;
@@ -107,7 +116,6 @@
     }
     .btn-sm:hover { background: #2a3a2a; }
 
-    /* Match UI */
     .match-ui { display: none; }
     .match-ui.active { display: block; }
     .shot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
@@ -124,6 +132,7 @@
     <div class="badge-row">
       <span class="badge" id="badgeAge">Age 16</span>
       <span class="badge" id="badgeStatus">District</span>
+      <span class="badge gold" id="badgeMilestone" style="display:none;">INDIA</span>
     </div>
   </div>
 
@@ -138,6 +147,7 @@
     <div class="match-banner" id="matchBanner">🏏 Upcoming: District U-19 Trials</div>
     <p id="storyText">You wake up to the distant sound of bat on ball. Your father brings chai. The District U-19 trials are in two weeks. How will you prepare?</p>
 
+    <!-- CARD SET: Core choices -->
     <button class="choice-btn" onclick="choose('train')">
       <h3>💪 Heavy Net Practice</h3>
       <p>Two intense sessions daily. Skill +12, Energy -15.</p>
@@ -151,6 +161,12 @@
     <button class="choice-btn" onclick="choose('social')">
       <h3>🎉 Social / Media</h3>
       <p>Build connections. Fame +8, Energy -10, Skill -3.</p>
+    </button>
+
+    <!-- NEW CARD: Study Tactics -->
+    <button class="choice-btn" onclick="choose('study')">
+      <h3>📚 Study Tactics</h3>
+      <p>Watch film, read pitch reports. Skill +8, Energy -5.</p>
     </button>
   </section>
 
@@ -210,21 +226,21 @@
     s.position.set(x, 0.4, -2.5); scene.add(s);
   });
 
-  // Ball (cricket ball)
+  // Ball
   const ballGeo = new THREE.SphereGeometry(0.24, 16, 16);
   const ballMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.3, metalness: 0.3 });
   const ball = new THREE.Mesh(ballGeo, ballMat); ball.position.set(2.5, 0.7, 0); scene.add(ball);
   const seam = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.025, 8, 20), new THREE.MeshStandardMaterial({ color: 0xffffff }));
   ball.add(seam);
 
-  // Bat model (simple box + handle)
+  // Bat
   const batGroup = new THREE.Group();
   const blade = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.6, 1.2), new THREE.MeshStandardMaterial({ color: 0xc19a6b }));
   const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
   handle.position.set(0, -0.6, 0); batGroup.add(blade, handle);
   batGroup.position.set(-2, 0.1, 2); batGroup.rotation.y = Math.PI / 4; scene.add(batGroup);
 
-  // Crowd dots (subtle)
+  // Crowd
   for (let i = 0; i < 30; i++) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), new THREE.MeshStandardMaterial({ color: 0x334433 }));
     c.position.set((Math.random()-0.5)*12, 0.15, -5 - Math.random()*3);
@@ -258,6 +274,7 @@
     selected: false, eventText: ""
   };
 
+  // NEW CARD: Expanded event cards
   const events = [
     "You spend the morning in nets. Footwork improves noticeably.",
     "A long run around the ground leaves you stronger.",
@@ -265,23 +282,28 @@
     "You feel a shoulder strain. Smart rest is needed now.",
     "Your training post gets local fan love. Confidence rises.",
     "The coach pulls you aside: 'Keep working. You have it.'",
-    "You stay up watching old Tendulkar clips. Inspired."
+    "You stay up watching old Tendulkar clips. Inspired.",
+    "A senior player invites you for a private net session. Insights gained.",
+    "Rain forces indoor drills. Reaction time sharpens.",
+    "You read a pitch report and spot a weakness in the opposition.",
+    "The club president praises your discipline. Morale rises.",
+    "A selector texts: 'Keep this form up.'",
+    "A tough loss teaches more than any win. Resolve hardens.",
+    "Your father says you're walking like a cricketer now."
   ];
 
   function loadState() {
     try {
       const s = localStorage.getItem(STORAGE_KEY);
-      if (s) {
-        const parsed = JSON.parse(s);
-        Object.assign(state, parsed);
-      }
+      if (s) Object.assign(state, JSON.parse(s));
     } catch(e) {}
   }
 
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-    document.getElementById('saveHint').textContent = "Saved";
-    setTimeout(() => document.getElementById('saveHint').textContent = "Auto-saved", 1000);
+    const hint = document.getElementById('saveHint');
+    hint.textContent = "Saved";
+    setTimeout(() => hint.textContent = "Auto-saved", 1000);
   }
 
   function renderUI() {
@@ -291,23 +313,22 @@
     document.getElementById('sRuns').textContent = state.runs;
     document.getElementById('badgeAge').textContent = `Age ${state.age}`;
     document.getElementById('badgeStatus').textContent = state.selected ? "INDIA" : (state.age >= 20 ? "State" : "District");
-  }
-
-  function buildChoices() {
-    // This prototype rebuilds choices via the HTML structure.
-    // In this enhanced version we keep the same 3 core choices for simplicity.
-    renderUI();
+    const goldBadge = document.getElementById('badgeMilestone');
+    if (state.selected) {
+      goldBadge.style.display = 'inline-block';
+    } else {
+      goldBadge.style.display = 'none';
+    }
   }
 
   // ----- Match Engine -----
   function triggerMatch() {
     document.getElementById('matchBanner').textContent = "🏏 MATCH DAY: You are batting for the District XI";
     document.getElementById('storyText').textContent = "You walk out to bat. The pitch is green. The bowler is quick. Choose your shot carefully.";
-    // Replace choices temporarily
     const area = document.getElementById('storyArea');
-    // Clear existing choice buttons
     document.querySelectorAll('.choice-btn').forEach(b => b.remove());
 
+    // NEW CARD: More shot cards
     const shots = [
       { name: "Defensive", desc: "Block and survive. Low risk.", result: () => { state.skill += 2; } },
       { name: "Rotate", desc: "Quick singles, keep strike. Medium risk/reward.", result: () => { state.runs += Math.floor(Math.random()*15)+1; state.energy -= 5; } },
@@ -315,7 +336,13 @@
         const roll = Math.random();
         if (roll > 0.6) { state.runs += Math.floor(Math.random()*35)+10; state.fame += 3; }
         else { document.getElementById('storyText').textContent += " You mistime it and get caught! But you showed intent."; state.skill += 3; }
-      }}
+      }},
+      { name: "Sweep", desc: "Sweep the spinner. Risky if mistimed.", result: () => {
+        const roll = Math.random();
+        if (roll > 0.65) { state.runs += 8; state.skill += 2; }
+        else { document.getElementById('storyText').textContent += " Missed sweep. LBW shout! You survive."; state.skill += 1; }
+      }},
+      { name: "Leave", desc: "Shoulder arms. Build patience.", result: () => { state.skill += 3; state.energy += 3; } }
     ];
 
     shots.forEach(shot => {
@@ -324,52 +351,64 @@
       btn.innerHTML = `<h3>🏏 ${shot.name}</h3><p>${shot.desc}</p>`;
       btn.onclick = () => {
         shot.result();
-        document.getElementById('storyText').textContent = "The over ends. You head back to the pavilion feeling focused.";
-        state.age += 1;
+        document.getElementById('matchBanner').textContent = "🏏 Upcoming: State Trials";
+        document.getElementById('storyText').textContent = "The match is over. Your coach reviews the tape. What's next for you?";
         saveState();
         renderUI();
-        setTimeout(() => {
-          document.getElementById('matchBanner').textContent = "🏏 Upcoming: State Trials";
-          document.getElementById('storyText').textContent = "The match is over. Your coach reviews the tape. What's next for you?";
-          document.querySelectorAll('.choice-btn').forEach(b => b.remove());
-          // Restore normal choices
-          ['train','rest','social'].forEach(type => {
-            const label = type === 'train' ? "💪 Heavy Net Practice" : type === 'rest' ? "🛌 Rest & Recover" : "🎉 Social / Media";
-            const p = type === 'train' ? "Two intense sessions daily. Skill +12, Energy -15." : type === 'rest' ? "Sleep well, meditate. Energy +22, Skill +4." : "Build connections. Fame +8, Energy -10, Skill -3.";
-            const btn = document.createElement('button');
-            btn.className = 'choice-btn';
-            btn.innerHTML = `<h3>${label}</h3><p>${p}</p>`;
-            btn.onclick = () => choose(type);
-            area.appendChild(btn);
-          });
-        }, 1500);
+        document.querySelectorAll('.choice-btn').forEach(b => b.remove());
+
+        // Restore core cards immediately
+        ['train','rest','social','study'].forEach(type => {
+          const label = type === 'train' ? "💪 Heavy Net Practice" : type === 'rest' ? "🛌 Rest & Recover" : type === 'social' ? "🎉 Social / Media" : "📚 Study Tactics";
+          const p = type === 'train' ? "Two intense sessions daily. Skill +12, Energy -15." : type === 'rest' ? "Sleep well, meditate. Energy +22, Skill +4." : type === 'social' ? "Build connections. Fame +8, Energy -10, Skill -3." : "Watch film, read pitch reports. Skill +8, Energy -5.";
+          const newBtn = document.createElement('button');
+          newBtn.className = 'choice-btn';
+          newBtn.innerHTML = `<h3>${label}</h3><p>${p}</p>`;
+          newBtn.onclick = () => choose(type);
+          area.appendChild(newBtn);
+        });
       };
       area.appendChild(btn);
     });
   }
 
   window.choose = function(type) {
-    // Visual feedback
     document.querySelectorAll('.choice-btn').forEach(b => {
       b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
     });
 
     if (type === 'train') {
-      state.skill += 12; state.energy = Math.max(0, state.energy - 15); state.age += 1;
+      state.skill += 12; state.energy = Math.max(0, state.energy - 15);
     } else if (type === 'rest') {
-      state.energy = Math.min(100, state.energy + 22); state.skill += 4; state.age += 1;
+      state.energy = Math.min(100, state.energy + 22); state.skill += 4;
     } else if (type === 'social') {
-      state.fame += 8; state.energy = Math.max(0, state.energy - 10); state.skill = Math.max(0, state.skill - 3); state.age += 1;
+      state.fame += 8; state.energy = Math.max(0, state.energy - 10); state.skill = Math.max(0, state.skill - 3);
+    } else if (type === 'study') {
+      state.skill += 8; state.energy = Math.max(0, state.energy - 5);
     }
 
-    // Random event
     let evt = events[Math.floor(Math.random() * events.length)];
+    let triggeredMatch = false;
 
-    // Progression gates
+    // Progression gates (check before aging so match can consume turn cleanly)
     if (state.skill > 65 && state.age >= 18) {
       evt = "Selection news arrives: You are called up for the State U-23 camp!";
       state.fame += 15;
-      if (state.age >= 21 && state.skill >= 80 && state.fame >= 35) triggerMatch();
+
+      if (state.age >= 21 && state.skill >= 80 && state.fame >= 35) {
+        state.selected = true;
+        state.age += 1;
+        document.getElementById('storyText').textContent = evt + " The selectors want you to play a trial match right away!";
+        saveState();
+        renderUI();
+        triggerMatch();
+        setTimeout(() => {
+          document.querySelectorAll('.choice-btn').forEach(b => {
+            b.style.opacity = '1'; b.style.pointerEvents = 'auto';
+          });
+        }, 600);
+        return;
+      }
     }
 
     if (state.energy < 15) {
@@ -377,11 +416,11 @@
       state.skill -= 4;
     }
 
+    state.age += 1;
     document.getElementById('storyText').textContent = evt;
     saveState();
     renderUI();
 
-    // Re-enable choices after short delay
     setTimeout(() => {
       document.querySelectorAll('.choice-btn').forEach(b => {
         b.style.opacity = '1'; b.style.pointerEvents = 'auto';
@@ -396,7 +435,7 @@
     }
   };
 
-  // Audio Ambience (Web Audio API)
+  // Audio Ambience
   let audioCtx, osc, gain;
   let soundOn = true;
 
@@ -422,12 +461,10 @@
     soundOn = !soundOn;
   }
 
-  // Initialize
   loadState();
   renderUI();
   saveState();
 
-  // Add sound toggle button to footer
   const soundBtn = document.createElement('button');
   soundBtn.className = 'btn-sm';
   soundBtn.textContent = 'Sound';
